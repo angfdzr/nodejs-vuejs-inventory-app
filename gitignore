@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# environment & secrets
+.env
+.env.*
+!.env.example
+
+# build output
+dist/
+
+# uploaded files (foto nota)
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+
+# database dump / backup
+*.sql
+*.sql.gz
+*.tar.gz
+
+# logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/

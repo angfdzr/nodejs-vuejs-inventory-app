@@ -1,0 +1,77 @@
+name: inventaris-vts
+
+services:
+  db:
+    image: mariadb:10.11
+    container_name: inventaris-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Jakarta
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - inventaris-net
+
+  backend:
+    build: ./backend
+    container_name: inventaris-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+      FRONTEND_URL: ${APP_URL}
+      COOKIE_SECURE: "true"
+      DB_SYNC_ALTER: "false"
+      TZ: Asia/Jakarta
+    volumes:
+      - uploads_data:/usr/src/app/public/uploads
+    networks:
+      - inventaris-net
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: inventaris-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - inventaris-net
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: inventaris-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+    networks:
+      - inventaris-net
+
+volumes:
+  db_data:
+  uploads_data:
+
+networks:
+  inventaris-net:
